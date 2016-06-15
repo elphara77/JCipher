@@ -7,7 +7,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.security.InvalidKeyException;
 import java.security.Key;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Base64;
 
@@ -15,14 +14,13 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
-import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.SecretKeySpec;
 
 public class JCipher {
 
-    private static final String ALGO = "AES";
-
     private static JCipher instance = null;
+
+    private static final String ALGO = "AES";
 
     private final static byte[] SIGN = new byte[]{1, 10, 19, 7, 7, 29, 4, 19, 8, 0, 28, 1, 20, 11, 6, 6, 20, 12};
 
@@ -30,8 +28,7 @@ public class JCipher {
     private Key key = null;
 
     private JCipher() throws Exception {
-        this.cipher = getCipher();
-        loadKey();
+        this.cipher = Cipher.getInstance(ALGO);
     }
 
     public static synchronized JCipher getInstance() throws Exception {
@@ -50,20 +47,12 @@ public class JCipher {
         return Base64.getEncoder().encode(content);
     }
 
-    public byte[] decryptB64(byte[] base64) throws IllegalBlockSizeException, BadPaddingException, InvalidKeyException {
-        return decrypt(Base64.getDecoder().decode(base64));
-    }
-
     public byte[] decrypt(byte[] raw) throws IllegalBlockSizeException, BadPaddingException, InvalidKeyException {
         this.cipher.init(Cipher.DECRYPT_MODE, this.key);
         return this.cipher.doFinal(Arrays.copyOfRange(raw, SIGN.length, raw.length));
     }
 
-    private static Cipher getCipher() throws NoSuchAlgorithmException, NoSuchPaddingException {
-        return Cipher.getInstance(ALGO);
-    }
-
-    private void loadKey() throws Exception {
+    public void loadKey() throws Exception {
         File keyFile = new File(System.getProperty("user.home"), ".jckey");
         if (!keyFile.exists()) {
             Key secretKey = KeyGenerator.getInstance(ALGO).generateKey();
@@ -82,7 +71,7 @@ public class JCipher {
         }
     }
 
-    public static boolean isCryptContent(byte[] fromB64) {
+    public boolean isCryptContent(byte[] fromB64) {
         boolean isCryptContent = false;
         if (fromB64 != null && fromB64.length > SIGN.length) {
             isCryptContent = Arrays.equals(SIGN, Arrays.copyOfRange(fromB64, 0, SIGN.length));

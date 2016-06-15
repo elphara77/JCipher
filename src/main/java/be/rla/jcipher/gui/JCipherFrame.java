@@ -16,7 +16,7 @@ public class JCipherFrame extends JFrame {
 
     private static JCipherFrame instance = new JCipherFrame();
 
-    public static synchronized JCipherFrame getInstance() {
+    public static JCipherFrame getInstance() {
         if (instance == null) {
             instance = new JCipherFrame();
         }
@@ -41,6 +41,8 @@ public class JCipherFrame extends JFrame {
         getContentPane().add(lblDropAFile, gbc_lblDropAFile);
 
         fileDrop();
+        setLocationRelativeTo(null);
+        setVisible(true);
     }
 
     private void fileDrop() {
