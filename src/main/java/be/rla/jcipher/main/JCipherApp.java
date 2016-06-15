@@ -9,7 +9,7 @@ import be.rla.jcipher.gui.JCipherFrame;
 
 public class JCipherApp {
 
-    public static final String VERSION = "JCipher v1 (c) R.Laporte";
+    public static final String VERSION = "JCipher v1.1 (c) R.Laporte";
 
     private static Timer timer = new Timer(true);
 

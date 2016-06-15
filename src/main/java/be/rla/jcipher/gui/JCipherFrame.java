@@ -30,8 +30,8 @@ public class JCipherFrame extends JFrame {
         GridBagLayout gridBagLayout = new GridBagLayout();
         gridBagLayout.columnWidths = new int[]{1115, 0};
         gridBagLayout.rowHeights = new int[]{318, 0};
-        gridBagLayout.columnWeights = new double[]{0.0, Double.MIN_VALUE};
-        gridBagLayout.rowWeights = new double[]{0.0, Double.MIN_VALUE};
+        gridBagLayout.columnWeights = new double[]{1.0, Double.MIN_VALUE};
+        gridBagLayout.rowWeights = new double[]{1.0, Double.MIN_VALUE};
         getContentPane().setLayout(gridBagLayout);
 
         JLabel lblDropAFile = new JLabel("Drop a file here to crypt or decrypt it !");
