@@ -40,6 +40,7 @@ public class JCipher {
 
     public byte[] crypt(byte[] phrase) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
         this.cipher.init(Cipher.ENCRYPT_MODE, this.key);
+        // TODO use buffer for large file ???
         byte[] crypted = this.cipher.doFinal(phrase);
         byte[] content = new byte[SIGN.length + crypted.length];
         System.arraycopy(SIGN, 0, content, 0, SIGN.length);
@@ -49,6 +50,7 @@ public class JCipher {
 
     public byte[] decrypt(byte[] raw) throws IllegalBlockSizeException, BadPaddingException, InvalidKeyException {
         this.cipher.init(Cipher.DECRYPT_MODE, this.key);
+        // TODO use buffer for large file !!! ???
         return this.cipher.doFinal(Arrays.copyOfRange(raw, SIGN.length, raw.length));
     }
 

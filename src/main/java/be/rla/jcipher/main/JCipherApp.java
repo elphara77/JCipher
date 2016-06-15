@@ -7,11 +7,12 @@ import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 
 import be.rla.jcipher.core.JCipher;
+import be.rla.jcipher.core.JCipherListener;
 import be.rla.jcipher.gui.JCipherFrame;
 
 public class JCipherApp {
 
-    public static final String VERSION = "JCipher v1.2 (c) R.Laporte";
+    public static final String VERSION = "JCipher v1.3 (c) R.Laporte";
 
     private static Timer timer = new Timer(true);
     private static TimerTask timerCloseTask;
@@ -76,7 +77,11 @@ public class JCipherApp {
         timerCloseTask = new TimerTask() {
             @Override
             public void run() {
-                JCipherFrame.getInstance().dispose();
+                if (JCipherListener.getInstance().isBusy()) {
+                    resetTimer();
+                } else {
+                    JCipherFrame.getInstance().dispose();
+                }
             }
         };
         timer.schedule(timerCloseTask, TimeUnit.MINUTES.toMillis(3L));
