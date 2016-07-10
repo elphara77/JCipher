@@ -9,11 +9,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Base64;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
 
 import javax.swing.JOptionPane;
-
-import org.apache.commons.io.IOUtils;
 
 import be.rla.jcipher.gui.JCipherFrame;
 import net.iharder.dnd.FileDrop.Listener;
@@ -56,34 +55,38 @@ public class JCipherListener implements Listener {
                             JCipherFrame.getInstance().dispose();
                         }
 
-                        byte[] buffer = null;
-                        byte[] fromB64 = null;
+                        ByteBuffer buffer = null;
+                        ByteBuffer fromB64 = null;
                         try (InputStream is = new BufferedInputStream(new FileInputStream(files[0]))) {
-                            buffer = new byte[is.available()];
                             JCipherFrame.getInstance().getProgressBar().setValue(20);
-                            IOUtils.read(is, buffer);
-                            JCipherFrame.getInstance().getProgressBar().setValue(30);
-                            try {
-                                fromB64 = Base64.getDecoder().decode(buffer);
-                                JCipherFrame.getInstance().getProgressBar().setValue(40);
-                                if (!JCipher.getInstance().isCryptContent(fromB64)) {
-                                    fromB64 = null;
-                                }
-                                JCipherFrame.getInstance().getProgressBar().setValue(50);
-                            } catch (IllegalArgumentException e) {
-                                // is not Base64
-                            }
+                            buffer = ByteBuffer.allocate(is.available());
+                            JCipher.analyze("allocated :", buffer);
+                            Channels.newChannel(is).read(buffer);
+                            JCipher.analyze("read :", buffer);
                         } catch (Exception e1) {
                             e1.printStackTrace();
                         }
-                        if (fromB64 == null && buffer != null && buffer.length > 0) {
+                        JCipherFrame.getInstance().getProgressBar().setValue(30);
+                        JCipherFrame.getInstance().getProgressBar().setValue(40);
+                        try {
+                            if (!JCipher.getInstance().isCryptContent(fromB64)) {
+                                fromB64 = null;
+                            }
+                        } catch (Exception e) {
+
+                        }
+                        JCipherFrame.getInstance().getProgressBar().setValue(50);
+                        // is not Base64
+                        if (fromB64 == null && buffer != null && buffer.limit() > 0) {
                             int resp = JOptionPane.showConfirmDialog(JCipherFrame.getInstance(), "Do you REALLY want to crypt this file ?");
                             boolean ok = false;
                             if (resp == JOptionPane.OK_OPTION) {
                                 try (OutputStream os = new BufferedOutputStream(new FileOutputStream(files[0]))) {
                                     JCipherFrame.getInstance().getLabel().setText("Encrypting " + files[0].getName() + " please wait!");
                                     JCipherFrame.getInstance().getProgressBar().setValue(70);
-                                    IOUtils.write(JCipher.getInstance().crypt(buffer), os);
+                                    buffer.rewind();
+                                    ByteBuffer crypted = JCipher.getInstance().crypt(buffer);
+                                    Channels.newChannel(os).write(crypted);
                                     JCipherFrame.getInstance().getProgressBar().setValue(100);
                                     ok = true;
                                 } catch (Throwable e) {
@@ -98,7 +101,7 @@ public class JCipherListener implements Listener {
                                 JOptionPane.showMessageDialog(JCipherFrame.getInstance(), "The file has been NOT encrypted !", "JCipher", JOptionPane.WARNING_MESSAGE);
                             }
                         } else {
-                            byte[] datas = null;
+                            ByteBuffer datas = null;
                             try {
                                 JCipherFrame.getInstance().getLabel().setText("Decrypting " + files[0].getName() + " please wait");
                                 JCipherFrame.getInstance().getProgressBar().setValue(60);
@@ -122,7 +125,7 @@ public class JCipherListener implements Listener {
                                     try (OutputStream os = new BufferedOutputStream(new FileOutputStream(outputFile))) {
                                         JCipherFrame.getInstance().getLabel().setText("Writing temp file to open please wait");
                                         JCipherFrame.getInstance().getProgressBar().setValue(80);
-                                        IOUtils.write(datas, os);
+                                        Channels.newChannel(os).write(datas);
                                         JCipherFrame.getInstance().getProgressBar().setValue(90);
                                     }
                                     outputFile.deleteOnExit();

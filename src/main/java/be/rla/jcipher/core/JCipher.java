@@ -5,8 +5,10 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
 import java.security.Key;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Base64;
 
@@ -14,6 +16,8 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.ShortBufferException;
 import javax.crypto.spec.SecretKeySpec;
 
 public class JCipher {
@@ -27,31 +31,88 @@ public class JCipher {
     private Cipher cipher = null;
     private Key key = null;
 
-    private JCipher() throws Exception {
+    private JCipher() throws NoSuchAlgorithmException, NoSuchPaddingException {
         this.cipher = Cipher.getInstance(ALGO);
     }
 
-    public static synchronized JCipher getInstance() throws Exception {
+    public static synchronized JCipher getInstance() throws NoSuchAlgorithmException, NoSuchPaddingException {
         if (instance == null) {
             instance = new JCipher();
         }
         return instance;
     }
 
-    public byte[] crypt(byte[] phrase) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
+    public ByteBuffer crypt(ByteBuffer buffer) throws InvalidKeyException, ShortBufferException, IllegalBlockSizeException, BadPaddingException {
         this.cipher.init(Cipher.ENCRYPT_MODE, this.key);
-        // TODO use buffer for large file ???
-        byte[] crypted = this.cipher.doFinal(phrase);
-        byte[] content = new byte[SIGN.length + crypted.length];
-        System.arraycopy(SIGN, 0, content, 0, SIGN.length);
-        System.arraycopy(crypted, 0, content, SIGN.length, crypted.length);
-        return Base64.getEncoder().encode(content);
+        ByteBuffer out = ByteBuffer.allocate(this.cipher.getOutputSize(buffer.limit()) + SIGN.length);
+        analyze("out", out);
+        out.position(SIGN.length);
+        analyze("pos. SIGN", out);
+        this.cipher.doFinal(buffer, out);
+        analyze("do final", out);
+        out.rewind();
+        analyze("rewind", out);
+        out.put(SIGN);
+        analyze("put SIGN", out);
+        ByteBuffer encoded = Base64.getEncoder().encode((ByteBuffer) out.rewind());
+        analyze("encoded", encoded);
+        return encoded;
     }
 
-    public byte[] decrypt(byte[] raw) throws IllegalBlockSizeException, BadPaddingException, InvalidKeyException {
+    public ByteBuffer decrypt(ByteBuffer fromB64) throws InvalidKeyException, ShortBufferException, IllegalBlockSizeException, BadPaddingException {
         this.cipher.init(Cipher.DECRYPT_MODE, this.key);
-        // TODO use buffer for large file !!! ???
-        return this.cipher.doFinal(Arrays.copyOfRange(raw, SIGN.length, raw.length));
+        analyze("to decrypt", fromB64);
+        fromB64.position(SIGN.length);
+        analyze("pass sign", fromB64);
+        int outputSize = this.cipher.getOutputSize(fromB64.limit());
+        ByteBuffer out = ByteBuffer.allocate(outputSize);
+        analyze("out", out);
+        this.cipher.doFinal(fromB64, out);
+        analyze("do final out", out);
+        return out;
+    }
+
+    public static void main(String[] args) {
+        ByteBuffer bb = ByteBuffer.allocate(10);
+        analyze(bb);
+        bb.put("A".getBytes());
+        analyze(bb);
+        bb.put("B".getBytes());
+        analyze(bb);
+        bb.put("B".getBytes());
+        bb.put("B".getBytes());
+        bb.put("B".getBytes());
+        bb.put("B".getBytes());
+        bb.put("B".getBytes());
+        bb.put("B".getBytes());
+        bb.position(5);
+        analyze(bb);
+        bb.put("C".getBytes());
+        analyze(bb);
+        // bb.clear();
+        // analyze(bb);
+        System.out.println("MARK");
+        // bb.mark();
+        // bb.reset();
+        analyze(bb);
+        bb.rewind();
+        analyze(bb);
+        bb.limit(4);
+        analyze(bb);
+    }
+
+    public static void analyze(ByteBuffer buffer) {
+        analyze("", buffer);
+    }
+
+    public static void analyze(String comment, ByteBuffer buffer) {
+        if (buffer.array().length < 100) {
+            System.out.println(String.format(comment + "%n%3d@%3d/%3d : \"%s\" - remains %d", buffer.position(), buffer.limit(), buffer.capacity(),
+                    Arrays.deepToString(Arrays.asList(buffer.array()).toArray()), buffer.remaining()));
+        } else {
+            System.out.println(String.format(comment + "%n%3d@%3d/%3d : \"%s\" - remains %d", buffer.position(), buffer.limit(), buffer.capacity(),
+                    "to long", buffer.remaining()));
+        }
     }
 
     public void loadKey() throws Exception {
@@ -73,10 +134,12 @@ public class JCipher {
         }
     }
 
-    public boolean isCryptContent(byte[] fromB64) {
+    public boolean isCryptContent(ByteBuffer fromB64) {
         boolean isCryptContent = false;
-        if (fromB64 != null && fromB64.length > SIGN.length) {
-            isCryptContent = Arrays.equals(SIGN, Arrays.copyOfRange(fromB64, 0, SIGN.length));
+        if (fromB64 != null && fromB64.limit() > SIGN.length) {
+            byte[] toTest = new byte[SIGN.length];
+            fromB64.get(toTest);
+            isCryptContent = Arrays.equals(SIGN, toTest);
         }
         return isCryptContent;
     }

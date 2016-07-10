@@ -32,7 +32,7 @@ public class JCipherFrame extends JFrame {
     private JCipherFrame() {
         super(JCipherApp.VERSION);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setBounds(0, 0, 1115, 340);
+        setBounds(0, 0, 1115, 340);// TODO large as screen wide ?
         GridBagLayout gridBagLayout = new GridBagLayout();
         gridBagLayout.columnWidths = new int[]{239, 0};
         gridBagLayout.rowHeights = new int[]{16, 0, 0};

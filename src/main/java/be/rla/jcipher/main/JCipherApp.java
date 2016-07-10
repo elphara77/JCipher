@@ -12,7 +12,7 @@ import be.rla.jcipher.gui.JCipherFrame;
 
 public class JCipherApp {
 
-    public static final String VERSION = "JCipher v1.3 (c) R.Laporte";
+    public static final String VERSION = "JCipher v1.4(beta) (c) R.Laporte";
 
     private static Timer timer = new Timer(true);
     private static TimerTask timerCloseTask;
