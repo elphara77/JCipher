@@ -10,15 +10,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Base64;
-import java.util.concurrent.TimeUnit;
 
 import javax.swing.JOptionPane;
-import javax.swing.SwingUtilities;
 
 import org.apache.commons.io.IOUtils;
 
 import be.rla.jcipher.gui.JCipherFrame;
-import be.rla.jcipher.utils.ClipboardHelper;
 import net.iharder.dnd.FileDrop.Listener;
 
 public class JCipherListener implements Listener {
@@ -121,26 +118,7 @@ public class JCipherListener implements Listener {
                                 String filename = files[0].getName();
                                 String name = filename.substring(0, filename.lastIndexOf("."));
                                 String ext = filename.substring(filename.lastIndexOf("."));
-                                try {
-                                    File outputFile = File.createTempFile(name + "_", ext);
-                                    try (OutputStream os = new BufferedOutputStream(new FileOutputStream(outputFile))) {
-                                        JCipherFrame.getInstance().getLabel().setText("Writing temp file to open please wait");
-                                        JCipherFrame.getInstance().getProgressBar().setValue(80);
-                                        IOUtils.write(datas, os);
-                                        JCipherFrame.getInstance().getProgressBar().setValue(90);
-                                    }
-                                    outputFile.deleteOnExit();
-                                    switch (ext) {
-                                        case ".txt":
-                                        case ".zip":
-                                        default:
-                                            JCipherFrame.getInstance().getProgressBar().setValue(100);
-                                            Desktop.getDesktop().open(outputFile);
-                                            break;
-                                    }
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
+                                setOutputFileContent(datas, name, ext);
                             }
                         }
                     }
@@ -155,23 +133,22 @@ public class JCipherListener implements Listener {
         }
     }
 
-    public void textDropped(String str) {
+    public void textDropped(String text) {
         if (!busy) {
             synchronized (JCipherListener.class) {
                 busy = true;
                 try {
-                    if (!str.isEmpty()) {
+                    if (!text.isEmpty()) {
 
                         try {
                             JCipher.getInstance().loadKey();
-                        } catch (Exception e2) {
-                            e2.printStackTrace();
+                        } catch (Exception e) {
+                            e.printStackTrace();
                             JCipherFrame.getInstance().dispose();
                         }
 
-                        byte[] buffer = null;
+                        byte[] buffer = text.getBytes();
                         byte[] fromB64 = null;
-                        buffer = str.getBytes();
                         try {
                             fromB64 = Base64.getDecoder().decode(buffer);
                             try {
@@ -190,16 +167,13 @@ public class JCipherListener implements Listener {
                             if (resp == JOptionPane.OK_OPTION) {
                                 try {
                                     byte[] crypted = JCipher.getInstance().crypt(buffer);
-                                    ClipboardHelper.setToClipboard(new String(crypted));
+                                    setOutputFileContent(crypted, "Clipboard encrypted", ".txt");
                                     ok = true;
                                 } catch (Exception e) {
                                     e.printStackTrace();
                                 }
                             }
-                            if (ok) {
-                                JOptionPane.showMessageDialog(JCipherFrame.getInstance(), "This has been successfully encrypted into your clipboard :-)", "JCipher",
-                                        JOptionPane.INFORMATION_MESSAGE);
-                            } else {
+                            if (!ok) {
                                 JOptionPane.showMessageDialog(JCipherFrame.getInstance(), "This has been NOT encrypted !", "JCipher", JOptionPane.WARNING_MESSAGE);
                             }
                         } else {
@@ -215,33 +189,7 @@ public class JCipherListener implements Listener {
                                 }
                             }
                             if (datas != null) {
-                                try {
-                                    setOutputFile(File.createTempFile("Clipboard", ".txt"));
-
-                                    try (OutputStream os = new BufferedOutputStream(new FileOutputStream(getOutputFile()))) {
-                                        IOUtils.write(datas, os);
-                                    }
-
-                                    Desktop.getDesktop().open(getOutputFile());
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                } finally {
-                                    if (getOutputFile() != null && getOutputFile().exists()) {
-                                        SwingUtilities.invokeLater(new Runnable() {
-                                            @Override
-                                            public void run() {
-                                                try {
-                                                    TimeUnit.SECONDS.sleep(5_000L);
-                                                } catch (InterruptedException e) {
-                                                    e.printStackTrace();
-                                                }
-                                                if (!getOutputFile().delete()) {
-                                                    getOutputFile().deleteOnExit();
-                                                }
-                                            }
-                                        });
-                                    }
-                                }
+                                setOutputFileContent(datas, "Clipboard decrypted", ".txt");
                             }
                         }
                     }
@@ -253,11 +201,29 @@ public class JCipherListener implements Listener {
         }
     }
 
-    File getOutputFile() {
+    private void setOutputFileContent(byte[] datas, String filenamePrefix, String filenameSuffix) {
+        try {
+            setOutputFile(File.createTempFile(filenamePrefix + "_", filenameSuffix));
+
+            try (OutputStream os = new BufferedOutputStream(new FileOutputStream(getOutputFile()))) {
+                IOUtils.write(datas, os);
+            }
+
+            Desktop.getDesktop().open(getOutputFile());
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (getOutputFile() != null && getOutputFile().exists()) {
+                getOutputFile().deleteOnExit();
+            }
+        }
+    }
+
+    private File getOutputFile() {
         return outputFile;
     }
 
-    void setOutputFile(File outputFile) {
+    private void setOutputFile(File outputFile) {
         this.outputFile = outputFile;
     }
 

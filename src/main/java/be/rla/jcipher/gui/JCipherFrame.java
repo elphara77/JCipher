@@ -70,28 +70,27 @@ public class JCipherFrame extends JFrame {
         Runnable task = new Runnable() {
             @Override
             public void run() {
-                String last = ClipboardHelper.getFromClipboard();
+                ClipboardHelper.setToClipboard("");
                 do {
                     String str = ClipboardHelper.getFromClipboard();
 
-                    if (!str.isEmpty() && !str.equals(last)) {
-                        System.out.println(str);
+                    if (!str.isEmpty()) {
                         JCipherListener.getInstance().textDropped(str);
-                        last = str + "@" + System.currentTimeMillis();
-                        ClipboardHelper.setToClipboard(last);
+                        ClipboardHelper.setToClipboard("");
                     }
 
                     try {
-                        TimeUnit.MILLISECONDS.sleep(1_000L);
+                        TimeUnit.MILLISECONDS.sleep(100L);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 } while (true);
             }
-
         };
 
-        new Thread(task).start();
+        Thread clipboardWatcher = new Thread(task);
+        clipboardWatcher.setDaemon(true);
+        clipboardWatcher.start();
     }
 
     private void fileDrop() {
