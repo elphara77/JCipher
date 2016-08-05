@@ -3,6 +3,7 @@ package be.rla.jcipher.gui;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.util.concurrent.TimeUnit;
 
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -10,6 +11,7 @@ import javax.swing.JProgressBar;
 
 import be.rla.jcipher.core.JCipherListener;
 import be.rla.jcipher.main.JCipherApp;
+import be.rla.jcipher.utils.ClipboardHelper;
 import net.iharder.dnd.FileDrop;
 
 public class JCipherFrame extends JFrame {
@@ -57,9 +59,39 @@ public class JCipherFrame extends JFrame {
         gbc_progressBar.gridy = 1;
         getContentPane().add(progressBar, gbc_progressBar);
 
-        fileDrop();
+        init();
         setLocationRelativeTo(null);
         setVisible(true);
+    }
+
+    private void init() {
+        fileDrop();
+
+        Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                String last = ClipboardHelper.getFromClipboard();
+                do {
+                    String str = ClipboardHelper.getFromClipboard();
+
+                    if (!str.isEmpty() && !str.equals(last)) {
+                        System.out.println(str);
+                        JCipherListener.getInstance().textDropped(str);
+                        last = str + "@" + System.currentTimeMillis();
+                        ClipboardHelper.setToClipboard(last);
+                    }
+
+                    try {
+                        TimeUnit.MILLISECONDS.sleep(1_000L);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                } while (true);
+            }
+
+        };
+
+        new Thread(task).start();
     }
 
     private void fileDrop() {
